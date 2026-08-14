@@ -216,7 +216,7 @@ void FxMainWindow::tryPressKey(HWND window, int key_index, bool force)
 
 void FxMainWindow::pressKey(HWND window, UINT code)
 {
-    PostMessageA(window, WM_KEYDOWN, code, 0);
+    //PostMessageA(window, WM_KEYDOWN, code, 0);
     PostMessageA(window, WM_KEYUP, code, 0);
 }
 
@@ -555,9 +555,13 @@ void FxMainWindow::setupUI()
     vlayout_main->addWidget(get_h_line());
 
     auto gridlayout_keys = new QGridLayout;
+
+    //gridlayout_keys尽可能紧凑
+    gridlayout_keys->setSpacing(0);
+
     gridlayout_keys->addWidget(new QLabel(QStringLiteral("启用")), 0, 0);
     gridlayout_keys->addWidget(new QLabel(QStringLiteral("间隔")), 0, 1);
-    gridlayout_keys->addWidget(new QLabel(QStringLiteral("是缺省技能")), 0, 2);
+    gridlayout_keys->addWidget(new QLabel(QStringLiteral("缺省")), 0, 2);
 
     for (int index = 0; index < 10; ++index)
     {
