@@ -2,9 +2,9 @@
     "version": 8,
     "configurePresets": [
         {
-            "name": "x64-windows",
-            "displayName": "Visual Studio Community 2022 x64",
-            "description": "Visual Studio 2022 (x64)",
+            "name": "x86-windows",
+            "displayName": "Visual Studio Community 2026 x86",
+            "description": "Visual Studio 2026 (x86)",
             "generator": "Ninja Multi-Config",
             "binaryDir": "${sourceDir}/out/${presetName}",
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
@@ -14,11 +14,11 @@
                 "rhs": "Windows"
             },
             "toolset": {
-                "value": "v143,host=x64",
+                "value": "v143,host=x86",
                 "strategy": "external"
             },
             "architecture": {
-                "value": "x64",
+                "value": "x86",
                 "strategy": "external"
             },
             "cacheVariables": {
@@ -26,21 +26,21 @@
                 "CMAKE_C_COMPILER": "cl.exe",
                 "CMAKE_CXX_COMPILER": "cl.exe",
                 "CMAKE_CXX_STANDARD": "20",
-                "VCPKG_TARGET_TRIPLET": "x64-windows-static"
+                "VCPKG_TARGET_TRIPLET": "x86-windows-static"
             }
         }
     ],
     "buildPresets": [
         {
-            "name": "x64-windows-debug",
-            "displayName": "x64 Windows Debug",
-            "configurePreset": "x64-windows",
+            "name": "x86-windows-debug",
+            "displayName": "x86 Windows Debug",
+            "configurePreset": "x86-windows",
             "configuration": "Debug"
         },
         {
-            "name": "x64-windows-release",
-            "displayName": "x64 Windows Release",
-            "configurePreset": "x64-windows",
+            "name": "x86-windows-release",
+            "displayName": "x86 Windows Release",
+            "configurePreset": "x86-windows",
             "configuration": "Release"
         }
     ]
