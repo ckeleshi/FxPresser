@@ -1,0 +1,36 @@
+﻿name: Build And Release FxPresser
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: lukka/get-cmake@latest
+      - uses: lukka/run-vcpkg@v11
+      - uses: lukka/run-cmake@v10
+        with:
+          configurePreset: 'x86-windows'
+          buildPreset: 'x86-windows-release'
+      - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/app_proj/Release/fxpresser.exe -DestinationPath .\fxpresser.zip
+      - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/lib_proj/Release/opengl32.dll -DestinationPath .\opengl32.zip
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true # Automatically populates release notes based on commit history
+          files: |
+            fxpresser.zip
+            opengl32.zip
+        env:
+          VCPKG_ROOT: ${{ github.workspace }}/vcpkg

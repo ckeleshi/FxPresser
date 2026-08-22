@@ -272,7 +272,7 @@ void helper_class::imgui_process()
             {
                 // 删除当前配置后补位
                 _config.profiles.erase(_config.profiles.begin() + static_cast<std::ptrdiff_t>(_config.profile_index));
-                _config.profile_index = std::clamp(_config.profile_index, 0u, _config.profiles.size() - 1);
+                _config.profile_index = std::clamp(_config.profile_index, std::size_t(0), _config.profiles.size() - 1);
                 current_profile       = &_config.get_current_profile();
 
                 ImGui::CloseCurrentPopup();

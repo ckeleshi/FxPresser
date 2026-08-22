@@ -1,0 +1,15 @@
+﻿{
+    "name": "fxpresser",
+    "version-string": "0.1.0",
+    "dependencies": [
+        "qt5-base",
+        {
+            "name": "imgui",
+            "features": [
+                "win32-binding",
+                "opengl2-binding"
+            ]
+        },
+        "nlohmann-json"
+    ]
+}
