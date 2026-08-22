@@ -22,7 +22,7 @@ jobs:
           buildPreset: 'x86-windows-release'
       - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/app_proj/Release/fxpresser.exe -DestinationPath .\fxpresser.zip
       - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/lib_proj/Release/opengl32.dll -DestinationPath .\opengl32.zip
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v7
         with:
           name: fxpresser
           path: fxpresser.zip
