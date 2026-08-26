@@ -1,4 +1,4 @@
-LIBRARY "dll"
+LIBRARY "opengl32"
 EXPORTS
 GlmfBeginGlsBlock = GlmfBeginGlsBlock_stub
 GlmfCloseMetaFile = GlmfCloseMetaFile_stub
