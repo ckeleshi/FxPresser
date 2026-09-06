@@ -2,9 +2,6 @@
 
 project(fxpresser-patch)
 
-find_package(imgui CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
-
 add_library(fxpresser-patch SHARED
     ../lib_proj/ffo.cpp
     ../lib_proj/dll.cpp
