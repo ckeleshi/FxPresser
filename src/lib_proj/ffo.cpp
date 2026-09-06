@@ -1,4 +1,10 @@
-﻿#include "helper/helper.h"
+﻿#ifndef FXPRESSER_PATCH_ONLY
+#include "helper/helper.h"
+#include <imgui.h>
+#include <imgui_impl_opengl2.h>
+#include <imgui_impl_win32.h>
+#endif
+
 #include "hooking/byte_pattern.h"
 #include "hooking/injector/calling.hpp"
 #include "hooking/injector/hooking.hpp"
@@ -7,14 +13,14 @@
 #include <WinUser.h>
 #include <Windows.h>
 #include <cstdint>
-#include <imgui.h>
-#include <imgui_impl_opengl2.h>
-#include <imgui_impl_win32.h>
 
+#ifndef FXPRESSER_PATCH_ONLY
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+#endif
 
 namespace
 {
+#ifndef FXPRESSER_PATCH_ONLY
 std::intptr_t display3d_base;
 WNDPROC       ffo_wndproc;
 
@@ -168,12 +174,14 @@ int __fastcall FFO_ImGui_Destroy(std::intptr_t display3d)
 
     return Display3D_Destroy_Hookback.fun(display3d);
 }
+#endif
 } // namespace
 
 void inject_game()
 {
     byte_pattern patterner;
 
+#ifndef FXPRESSER_PATCH_ONLY
     auto display3d_module = GetModuleHandleW(L"Display3D.dll");
     display3d_base        = reinterpret_cast<std::intptr_t>(display3d_module);
     auto display3d_vtbl = reinterpret_cast<std::intptr_t>(GetProcAddress(display3d_module, "??_7IDisplay@@6B@")) + 0xDC;
@@ -188,6 +196,14 @@ void inject_game()
 
     injector::ReadObject(display3d_vtbl + 0x18, Display3D_Destroy_Hookback.fun);
     injector::WriteObject(display3d_vtbl + 0x18, &FFO_ImGui_Destroy, true);
+    
+    // 储存原始WndProc函数
+    patterner.find_pattern("C7 45 A8 08 00 00 00 C7 45 AC");
+    if (patterner.has_size(1))
+    {
+        ffo_wndproc = injector::ReadMemory<WNDPROC>(patterner.get(0).i(10));
+    }
+#endif
 
     // Patch导致PostMessage失效的地方
     patterner.find_pattern("56 8B CF FF 75 08 E8 ? ? ? ? 84 C0 75 14");
@@ -200,12 +216,5 @@ void inject_game()
     if (patterner.has_size(1))
     {
         injector::WriteObject<unsigned char>(patterner.get(0).i(7), 0xEBu, true);
-    }
-
-    // 储存原始WndProc函数
-    patterner.find_pattern("C7 45 A8 08 00 00 00 C7 45 AC");
-    if (patterner.has_size(1))
-    {
-        ffo_wndproc = injector::ReadMemory<WNDPROC>(patterner.get(0).i(10));
     }
 }

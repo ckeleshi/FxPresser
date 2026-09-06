@@ -1,7 +1,10 @@
 ﻿#include "ffo.h"
-#include "helper/helper.h"
 #include <ShlObj.h>
 #include <filesystem>
+
+#ifndef FXPRESSER_PATCH_ONLY
+#include "helper/helper.h"
+#endif
 
 #define OGL_DISPATCH(func)                                                                                             \
     FARPROC                fn##func;                                                                                   \
@@ -775,13 +778,17 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     case DLL_PROCESS_ATTACH: {
         LoadOpenGL32();
         inject_game();
+#ifndef FXPRESSER_PATCH_ONLY
         helper_instance.patch();
         helper_instance.begin_helper();
+#endif
         break;
     }
 
     case DLL_PROCESS_DETACH: {
+#ifndef FXPRESSER_PATCH_ONLY
         helper_instance.end_helper();
+#endif
         break;
     }
 

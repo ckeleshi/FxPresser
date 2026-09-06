@@ -20,8 +20,9 @@ jobs:
         with:
           configurePreset: 'x86-windows'
           buildPreset: 'x86-windows-release'
-      - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/app_proj/Release/fxpresser.exe -DestinationPath .\fxpresser.zip
-      - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/lib_proj/Release/opengl32.dll -DestinationPath .\opengl32.zip
+      - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/app_proj/Release/fxpresser.exe -DestinationPath .\external_fxpresser.zip
+      - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/lib_proj/Release/opengl32.dll -DestinationPath .\internal_fxpresser.zip
+      - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/patch_proj/Release/opengl32.dll -DestinationPath .\fxpresser_patch.zip
       - run: echo "SHA_SHORT=$(git rev-parse --short HEAD)" >> $env:GITHUB_ENV
       - uses: softprops/action-gh-release@v2
         with:
@@ -31,7 +32,8 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            fxpresser.zip
-            opengl32.zip
+            external_fxpresser.zip
+            internal_fxpresser.zip
+            fxpresser_patch.zip
         env:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg

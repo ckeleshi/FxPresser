@@ -10,3 +10,4 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 add_subdirectory(src/app_proj)
 add_subdirectory(src/lib_proj)
+add_subdirectory(src/patch_proj)
