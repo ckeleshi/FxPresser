@@ -1,37 +1,46 @@
 ﻿name: Build And Release FxPresser
 
 on:
-  workflow_dispatch: {}
+    workflow_dispatch: {}
 
 jobs:
-  build:
-    permissions:
-      contents: write
-    runs-on: windows-2025-vs2026
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - uses: lukka/get-cmake@latest
-      - uses: lukka/run-vcpkg@v11
-      - uses: lukka/run-cmake@v10
-        with:
-          configurePreset: 'x86-windows'
-          buildPreset: 'x86-windows-release'
-      - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/app_proj/Release/fxpresser.exe -DestinationPath .\external_fxpresser.zip
-      - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/lib_proj/Release/opengl32.dll -DestinationPath .\internal_fxpresser.zip
-      - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/patch_proj/Release/opengl32.dll -DestinationPath .\fxpresser_patch.zip
-      - run: echo "SHA_SHORT=$(git rev-parse --short HEAD)" >> $env:GITHUB_ENV
-      - uses: softprops/action-gh-release@v2
-        with:
-          tag_name: "rel-${{ env.SHA_SHORT }}-${{ github.run_id }}"
-          name: Release ${{ env.SHA_SHORT }} ${{ github.run_id }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            external_fxpresser.zip
-            internal_fxpresser.zip
-            fxpresser_patch.zip
+    build:
+        permissions:
+            packages: write
+            contents: write
+        runs-on: windows-2025-vs2026
         env:
-          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+            VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg/bincache
+            VCPKG_BINARY_SOURCES: default,readwrite
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: true
+            - run: mkdir -p ${{env.VCPKG_DEFAULT_BINARY_CACHE}}
+            - uses: lukka/get-cmake@latest
+            - uses: lukka/run-vcpkg@v11
+            - uses: actions/cache@v4
+              with:
+                  path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+                  key: ${{ runner.os }}-vcpkg-binary-cache-${{ hashFiles('vcpkg.json') }}
+                  restore-keys: |
+                      ${{ runner.os }}-vcpkg-binary-cache-
+            - uses: lukka/run-cmake@v10
+              with:
+                  configurePreset: "x86-windows"
+                  buildPreset: "x86-windows-release"
+            - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/app_proj/Release/fxpresser.exe -DestinationPath .\external_fxpresser.zip
+            - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/lib_proj/Release/opengl32.dll -DestinationPath .\internal_fxpresser.zip
+            - run: Compress-Archive -Path ${{ github.workspace }}/out/x86-windows/src/patch_proj/Release/opengl32.dll -DestinationPath .\fxpresser_patch.zip
+            - run: echo "SHA_SHORT=$(git rev-parse --short HEAD)" >> $env:GITHUB_ENV
+            - uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: "rel-${{ env.SHA_SHORT }}-${{ github.run_id }}"
+                  name: Release ${{ env.SHA_SHORT }} ${{ github.run_id }}
+                  draft: false
+                  prerelease: false
+                  generate_release_notes: false
+                  files: |
+                      external_fxpresser.zip
+                      internal_fxpresser.zip
+                      fxpresser_patch.zip
