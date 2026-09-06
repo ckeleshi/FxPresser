@@ -189,6 +189,19 @@ void inject_game()
     injector::ReadObject(display3d_vtbl + 0x18, Display3D_Destroy_Hookback.fun);
     injector::WriteObject(display3d_vtbl + 0x18, &FFO_ImGui_Destroy, true);
 
+    // Patch导致PostMessage失效的地方
+    patterner.find_pattern("56 8B CF FF 75 08 E8 ? ? ? ? 84 C0 75 14");
+    if (patterner.has_size(1))
+    {
+        injector::MakeNOP(patterner.get(0).i(13), 2);
+    }
+
+    patterner.find_pattern("80 B9 0C 01 00 00 00 75 1E");
+    if (patterner.has_size(1))
+    {
+        injector::WriteObject<unsigned char>(patterner.get(0).i(7), 0xEBu, true);
+    }
+
     // 储存原始WndProc函数
     patterner.find_pattern("C7 45 A8 08 00 00 00 C7 45 AC");
     if (patterner.has_size(1))
