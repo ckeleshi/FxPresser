@@ -12,6 +12,6 @@ jobs:
         steps:
             - uses: nikhilbadyal/ghaction-rm-releases@v0.8.0
               with:
-                  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   RELEASE_PATTERN: "Release*"
                   RELEASES_TO_KEEP: 1
