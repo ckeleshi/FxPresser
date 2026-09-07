@@ -8,7 +8,7 @@ jobs:
         permissions:
             packages: write
             contents: write
-        runs-on: windows-2025-vs2026
+        runs-on: windows-2022
         env:
             VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg/bincache
             VCPKG_BINARY_SOURCES: default,readwrite

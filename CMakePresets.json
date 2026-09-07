@@ -8,9 +8,9 @@
     "configurePresets": [
         {
             "name": "x86-windows",
-            "displayName": "Visual Studio Community 2026 x86",
-            "description": "Visual Studio 2026 (x86)",
-            "generator": "Visual Studio 18 2026",
+            "displayName": "Visual Studio Community 2022 x86",
+            "description": "Visual Studio 2022 (x86)",
+            "generator": "Visual Studio 17 2022",
             "binaryDir": "${sourceDir}/out/${presetName}",
             "condition": {
                 "type": "equals",
@@ -24,10 +24,9 @@
             "cacheVariables": {
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
                 "CMAKE_CXX_STANDARD": "20",
-                "VCPKG_DEFAULT_TRIPLET": "x86-windows-static",
                 "VCPKG_HOST_TRIPLET": "x86-windows-static",
                 "VCPKG_TARGET_TRIPLET": "x86-windows-static",
-                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake"
             }
         }
     ],
