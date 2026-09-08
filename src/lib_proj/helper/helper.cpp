@@ -475,8 +475,7 @@ void helper_class::magic_hand_thread_proc(std::stop_token stt)
                 // 发送按键消息
                 auto key_code = VK_F1 + key_i;
 
-                PostMessageA(ffo_hwnd, WM_APP + 0x100, key_code, 0);
-                // PostMessageA(ffo_hwnd, WM_KEYUP, key_code, 0);
+                PostMessageA(ffo_hwnd, WM_KEYUP, key_code, 0);
 
                 // 调整全局时钟
                 _context.magic_hand_global_clock.adjust_target_time(std::chrono::milliseconds(
