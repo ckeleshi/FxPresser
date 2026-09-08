@@ -3,3 +3,6 @@ out/
 .vs/
 .vscode/
 vcpkg_installed/
+
+bin/
+obj/

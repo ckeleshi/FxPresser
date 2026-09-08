@@ -1,2 +1,7 @@
 ﻿只NOP 49C081 (代码中的第一个)能否解禁魔手
-内置魔手增加触发Alt组合键(lParam=1)
+
+取消不对等优势
+
+测试直接发送WM_SYSKEYUP能否触发组合键，因物理Alt与WM_KEYUP可以组合，直接发送WM_SYSKEYUP可能不行
+魔手增加触发Alt按键组() 共F1~F10 Alt+F1~F10 Alt+1~0
+使用Avalonia AOT建立外置魔手
