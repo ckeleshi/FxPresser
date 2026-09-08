@@ -44,3 +44,8 @@ jobs:
                       external_fxpresser.zip
                       internal_fxpresser.zip
                       fxpresser_patch.zip
+            - uses: nikhilbadyal/ghaction-rm-releases@v0.8.0
+              with:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  RELEASE_PATTERN: "^rel-*"
+                  RELEASES_TO_KEEP: 1
