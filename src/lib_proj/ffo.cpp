@@ -65,10 +65,7 @@ LRESULT WINAPI FFO_ImGui_WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 
     if (!processed)
     {
-        if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-        {
-            return true;
-        }
+        ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
     }
     else
     {
@@ -83,43 +80,6 @@ LRESULT WINAPI FFO_ImGui_WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
     if (io.WantCaptureKeyboard && msg == WM_CHAR)
     {
         return 0;
-    }
-
-    // 魔手模拟按键：把自定义消息 WM_APP + 0x100 转换为 WM_KEYUP 交给游戏
-    // wParam 即虚拟键码(VK_F1...)，需放在 is_fkey 拦截之前，避免被"忽略松开"分支吃掉
-    if (msg == WM_APP + 0x100)
-    {
-        return ffo_wndproc(hWnd, WM_KEYUP, wParam, lParam);
-    }
-
-    bool is_fkey   = (wParam >= VK_F1 && wParam <= VK_F10);
-    bool is_sys    = (msg == WM_SYSKEYDOWN) || (msg == WM_SYSKEYUP);
-    // 主键盘数字键('0'-'9')，仅在Alt组合(系统键消息)时拦截，不影响单独按数字键
-    bool is_altnum = is_sys && (wParam >= '0' && wParam <= '9');
-
-    if (is_fkey || is_altnum)
-    {
-        if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN)
-        {
-            // lParam bit30(previous key state) 为1表示按住产生的自动重复
-            bool is_repeat = (lParam & (1 << 30)) != 0;
-
-            if (!is_repeat)
-            {
-                // 将首次按下变成松开（保持原消息系列）
-                msg = is_sys ? WM_SYSKEYUP : WM_KEYUP;
-            }
-            else
-            {
-                // 忽略按住不放产生的重复
-                return 0;
-            }
-        }
-        else
-        {
-            // 忽略松开(WM_KEYUP / WM_SYSKEYUP)
-            return 0;
-        }
     }
 
     return ffo_wndproc(hWnd, msg, wParam, lParam);
