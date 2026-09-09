@@ -203,10 +203,4 @@ void inject_game()
     {
         injector::MakeNOP(patterner.get(0).i(13), 2);
     }
-
-    patterner.find_pattern("80 B9 0C 01 00 00 00 75 1E");
-    if (patterner.has_size(1))
-    {
-        injector::WriteObject<unsigned char>(patterner.get(0).i(7), 0xEBu, true);
-    }
 }
