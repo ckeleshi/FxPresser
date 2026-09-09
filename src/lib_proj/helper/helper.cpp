@@ -299,7 +299,7 @@ void helper_class::imgui_process()
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         }
-        for (int i = 0; i < 12; i++)
+        for (int i = 0; i < 10; i++)
         {
             char key_name_buffer[20];
             std::sprintf(key_name_buffer, "F%d", i + 1);
@@ -325,7 +325,7 @@ void helper_class::imgui_process()
             ImGui::EndTooltip();
         }
 
-        for (int i = 0; i < 12; i++)
+        for (int i = 0; i < 10; i++)
         {
             ImGui::PushID(i);
             if (ImGui::InputDouble("##KeyInterval", &current_profile->magic_hand_key_intervals[i], 0.01, 0.1, "%.2f"))
@@ -355,7 +355,7 @@ void helper_class::imgui_process()
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         }
-        for (int i = 0; i < 12; i++)
+        for (int i = 0; i < 10; i++)
         {
             ImGui::PushID(i);
             if (ImGui::InputDouble("##KeyLatency", &current_profile->magic_hand_key_latencies[i], 0.01, 0.1, "%.2f"))
@@ -383,7 +383,7 @@ void helper_class::imgui_process()
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         }
-        for (int i = 0; i < 12; i++)
+        for (int i = 0; i < 10; i++)
         {
             ImGui::PushID(i);
 
@@ -459,7 +459,7 @@ void helper_class::magic_hand_thread_proc(std::stop_token stt)
     while (!stt.stop_requested())
     {
         // 每次都从F1开始检查可以触发的技能
-        for (std::size_t key_i = 0; key_i < 12; ++key_i)
+        for (std::size_t key_i = 0; key_i < 10; ++key_i)
         {
             // 按键触发需要满足
             // 已启用
@@ -475,6 +475,7 @@ void helper_class::magic_hand_thread_proc(std::stop_token stt)
                 // 发送按键消息
                 auto key_code = VK_F1 + key_i;
 
+                PostMessageA(ffo_hwnd, WM_KEYDOWN, key_code, 0);
                 PostMessageA(ffo_hwnd, WM_KEYUP, key_code, 0);
 
                 // 调整全局时钟

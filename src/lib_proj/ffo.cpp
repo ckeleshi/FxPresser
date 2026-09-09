@@ -28,63 +28,93 @@ static injector::hook_back<int(__fastcall *)(std::intptr_t, int, HWND, int)> Dis
 static injector::hook_back<int(__fastcall *)(std::intptr_t)>                 Display3D_Update_Hookback;
 static injector::hook_back<int(__fastcall *)(std::intptr_t)>                 Display3D_Destroy_Hookback;
 
-wchar_t Param_To_WideChar(WPARAM wParam)
-{
-    wchar_t     wc;
-    char        buffer[2];
-    const char *pSrc = reinterpret_cast<const char *>(&wParam);
-    buffer[0]        = pSrc[1];
-    buffer[1]        = pSrc[0];
-    MultiByteToWideChar(936, 0, buffer, 2, &wc, 1);
-    return wc;
-}
-
 // ImGui消息处理
 LRESULT WINAPI FFO_ImGui_WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    ImGuiIO &io = ImGui::GetIO();
+    auto &io = ImGui::GetIO();
 
-    bool want_capture_mouse    = io.WantCaptureMouse;
-    bool want_capture_keyboard = io.WantCaptureKeyboard;
+    // 焦点是否位于ImGui文本框(InputText等)内
+    const bool want_text_input = io.WantTextInput;
+    // 鼠标是否悬停/交互于ImGui窗口或控件上
+    const bool want_capture_mouse = io.WantCaptureMouse;
 
     io.MouseDrawCursor = want_capture_mouse;
 
-    bool processed_by_imgui = false;
-
-    if (want_capture_keyboard)
+    switch (msg)
     {
-        if (msg == WM_CHAR && wParam >= 0xA0 && lParam == 1)
+    // ---- 按键消息: 喂给ImGui维护按键状态(如快捷键Ctrl+S), 无DefWindowProc副作用 ----
+    case WM_KEYDOWN:
+    case WM_KEYUP:
+    case WM_SYSKEYDOWN:
+    case WM_SYSKEYUP:
+        ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
+        // 需求1: 不在文本框内 -> 按键同时透传给游戏
+        if (!want_text_input)
         {
-            // 忽略被拆开的GB2312字节
-            processed_by_imgui = true;
+            return ffo_wndproc(hWnd, msg, wParam, lParam);
         }
-        else if (msg == WM_IME_CHAR && wParam > 0xA000 && lParam == 1)
-        {
-            // 将完整的GB2312字符转为Unicode再投给ImGui
-            io.AddInputCharacterUTF16(Param_To_WideChar(wParam));
-            processed_by_imgui = true;
-        }
+        // 在文本框内 -> 只给ImGui
+        return 0;
 
-        if (msg == WM_CHAR && !processed_by_imgui)
+    // ---- 字符/输入法(IME)消息: 只送给需要文字的一方, 避免重复 ----
+    case WM_CHAR:
+    case WM_SYSCHAR:
+    case WM_DEADCHAR:
+    case WM_IME_STARTCOMPOSITION:
+    case WM_IME_COMPOSITION:
+    case WM_IME_ENDCOMPOSITION:
+    case WM_IME_CHAR:
+    case WM_IME_SETCONTEXT:
+    case WM_IME_NOTIFY:
+    case WM_IME_CONTROL:
+    case WM_IME_KEYDOWN:
+    case WM_IME_KEYUP:
+    case WM_IME_SELECT:
+        // 焦点在ImGui文本框内 -> 只喂给ImGui(由其内部处理合成字符), 不下发游戏
+        if (want_text_input)
         {
-            return ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
+            ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
+            return 0;
         }
-    }
-
-    if (want_capture_mouse)
-    {
-        if (msg == WM_LBUTTONUP || msg == WM_LBUTTONDOWN)
-        {
-            return ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
-        }
-    }
-
-    if (!processed_by_imgui)
-    {
+        // 不在文本框内 -> 直接透传给游戏, 不喂给ImGui
+        // (ImGui的WM_IME_COMPOSITION分支内部会调DefWindowProc再合成一次字符, 导致游戏中文双份)
         return ffo_wndproc(hWnd, msg, wParam, lParam);
+
+    // ---- 鼠标消息 ----
+    case WM_MOUSEMOVE:
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONUP:
+    case WM_LBUTTONDBLCLK:
+    case WM_RBUTTONDOWN:
+    case WM_RBUTTONUP:
+    case WM_RBUTTONDBLCLK:
+    case WM_MBUTTONDOWN:
+    case WM_MBUTTONUP:
+    case WM_MBUTTONDBLCLK:
+    case WM_XBUTTONDOWN:
+    case WM_XBUTTONUP:
+    case WM_XBUTTONDBLCLK:
+    case WM_MOUSEWHEEL:
+    case WM_MOUSEHWHEEL:
+    case WM_MOUSELEAVE:
+        ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
+        // 需求2: 鼠标在ImGui窗口上 -> 吞掉消息, 防止点击/滚动穿透到游戏界面
+        if (want_capture_mouse)
+        {
+            return 0;
+        }
+        break; // 不在ImGui上 -> 继续透传给游戏
+
+    default:
+        // 其余消息(如WM_SETCURSOR)照常交给ImGui处理
+        if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+        {
+            return 0;
+        }
+        break;
     }
-    
-    return 0;
+
+    return ffo_wndproc(hWnd, msg, wParam, lParam);
 }
 
 // ImGui初始化

@@ -8,10 +8,10 @@ struct profile
 {
     std::string            name;
     int                    fps = 60;
-    std::array<bool, 12>   magic_hand_key_enable_flags;
-    std::array<double, 12> magic_hand_key_intervals;
-    std::array<double, 12> magic_hand_key_latencies;
-    std::array<bool, 12>   magic_hand_key_is_default_flags;
+    std::array<bool, 10>   magic_hand_key_enable_flags;
+    std::array<double, 10> magic_hand_key_intervals;
+    std::array<double, 10> magic_hand_key_latencies;
+    std::array<bool, 10>   magic_hand_key_is_default_flags;
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(profile, name, fps, magic_hand_key_enable_flags, magic_hand_key_intervals,
                                    magic_hand_key_latencies, magic_hand_key_is_default_flags)

@@ -220,7 +220,7 @@ void FxMainWindow::tryPressKey(HWND window, int key_index, bool force)
 
 void FxMainWindow::pressKey(HWND window, UINT code)
 {
-    // PostMessageA(window, WM_KEYDOWN, code, 0);
+    PostMessageA(window, WM_KEYDOWN, code, 0);
     PostMessageA(window, WM_KEYUP, code, 0);
 }
 
