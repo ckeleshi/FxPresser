@@ -64,19 +64,27 @@ LRESULT WINAPI FFO_ImGui_WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
             io.AddInputCharacterUTF16(Param_To_WideChar(wParam));
             processed_by_imgui = true;
         }
-    }
 
-    if (want_capture_keyboard || want_capture_mouse)
-    {
-        if (!processed_by_imgui)
+        if (msg == WM_CHAR && !processed_by_imgui)
         {
             return ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
         }
-
-        return 0;
     }
 
-    return ffo_wndproc(hWnd, msg, wParam, lParam);
+    if (want_capture_mouse)
+    {
+        if (msg == WM_LBUTTONUP || msg == WM_LBUTTONDOWN)
+        {
+            return ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
+        }
+    }
+
+    if (!processed_by_imgui)
+    {
+        return ffo_wndproc(hWnd, msg, wParam, lParam);
+    }
+    
+    return 0;
 }
 
 // ImGui初始化
