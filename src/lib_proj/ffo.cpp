@@ -44,41 +44,35 @@ LRESULT WINAPI FFO_ImGui_WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 {
     ImGuiIO &io = ImGui::GetIO();
 
-    io.MouseDrawCursor = io.WantCaptureMouse;
+    bool want_capture_mouse    = io.WantCaptureMouse;
+    bool want_capture_keyboard = io.WantCaptureKeyboard;
 
-    bool processed = false;
+    io.MouseDrawCursor = want_capture_mouse;
 
-    if (io.WantCaptureKeyboard)
+    bool processed_by_imgui = false;
+
+    if (want_capture_keyboard)
     {
         if (msg == WM_CHAR && wParam >= 0xA0 && lParam == 1)
         {
             // 忽略被拆开的GB2312字节
-            processed = true;
+            processed_by_imgui = true;
         }
         else if (msg == WM_IME_CHAR && wParam > 0xA000 && lParam == 1)
         {
             // 将完整的GB2312字符转为Unicode再投给ImGui
             io.AddInputCharacterUTF16(Param_To_WideChar(wParam));
-            processed = true;
+            processed_by_imgui = true;
         }
     }
 
-    if (!processed)
+    if (want_capture_keyboard || want_capture_mouse)
     {
-        ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
-    }
-    else
-    {
-        return 0;
-    }
+        if (!processed_by_imgui)
+        {
+            return ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam);
+        }
 
-    if (io.WantCaptureMouse && msg == WM_LBUTTONDOWN)
-    {
-        return 0;
-    }
-
-    if (io.WantCaptureKeyboard && msg == WM_CHAR)
-    {
         return 0;
     }
 
@@ -156,7 +150,7 @@ void inject_game()
 
     injector::ReadObject(display3d_vtbl + 0x18, Display3D_Destroy_Hookback.fun);
     injector::WriteObject(display3d_vtbl + 0x18, &FFO_ImGui_Destroy, true);
-    
+
     // 储存原始WndProc函数
     patterner.find_pattern("C7 45 A8 08 00 00 00 C7 45 AC");
     if (patterner.has_size(1))
