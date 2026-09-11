@@ -9,30 +9,47 @@
 #include <fstream>
 #include <imgui.h>
 
+// =============================================================================
+//  helper.cpp —— 魔手（FFOHelper）实现
+//
+//  包含三部分：
+//   1. 帧率控制：用自定义的 fps_sleep 替换游戏内的 Sleep 调用；
+//   2. 配置读写：ffohelper.json（与游戏 exe 同目录）；
+//   3. ImGui 界面绘制，以及后台线程中按间隔自动按键的逻辑。
+// =============================================================================
+
 helper_class helper_instance;
 
 namespace
 {
+// 高精度计时精度守卫；在 begin_helper 中创建、end_helper 中释放
 std::optional<scoped_period>                       period_guard;
+// 每帧应间隔的时间（由配置的 fps 计算，单位：steady_clock 的 tick）
 std::optional<std::chrono::steady_clock::duration> fps_interval;
+// 目标帧时刻时钟
 std::optional<target_clock>                        fps_clock;
+// 游戏窗口句柄（通过特征码从游戏内存中取得）
 HWND                                               ffo_hwnd;
 
 // 按设定间隔, 在还未到下一帧时间点时进行等待
 void WINAPI fps_sleep(DWORD)
 {
+    // 首次调用时根据当前配置的帧率计算每帧间隔
     if (!fps_interval.has_value())
     {
         fps_interval = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::seconds(1)) /
                        helper_instance.get_current_profile().fps;
     }
 
+    // 首次调用时初始化帧时钟
     if (!fps_clock.has_value())
     {
         fps_clock.emplace();
         fps_clock->set_target_time_from_now(fps_interval.value());
     }
 
+    // 睡到目标帧时刻：剩余时间较长时用 Sleep 毫秒级等待，
+    // 剩余不足 2ms 时用 Sleep(0) 让出时间片，避免睡过头。
     do
     {
         auto rest = fps_clock->rest_to_target_time();
@@ -51,10 +68,12 @@ void WINAPI fps_sleep(DWORD)
         }
     } while (true);
 
+    // 顺延到下一帧的目标时刻
     fps_clock->adjust_target_time(fps_interval.value());
 }
 } // namespace
 
+// 配置文件路径：与宿主 exe 同目录的 ffohelper.json
 std::filesystem::path helper_class::get_config_path()
 {
     wchar_t               cPath[MAX_PATH];
@@ -64,6 +83,7 @@ std::filesystem::path helper_class::get_config_path()
     return cppPath.parent_path() / L"ffohelper.json";
 }
 
+// 从文件中载入配置；文件不存在或解析失败时使用默认配置
 void helper_class::load_config()
 {
     _config.profiles.clear();
@@ -79,24 +99,28 @@ void helper_class::load_config()
         }
         catch (std::exception &e)
         {
+            // 配置损坏时忽略异常，落到下面的默认配置
         }
     }
 
     _config.ensure_valid_config();
 }
 
+// 将配置以 JSON 写入文件（覆盖原有内容）
 void helper_class::save_config()
 {
     std::ofstream ofs(get_config_path(), std::ios::trunc);
     ofs << nlohmann::json(_config).dump();
 }
 
+// 游戏内部用于保存显示设备信息的结构（只需要其中保存窗口句柄的字段）
 struct GameDevice
 {
     int  f0[5];
-    HWND f14;
+    HWND f14; // 游戏窗口句柄
 };
 
+// 安装内存补丁：替换 Sleep 实现帧率控制，并取得游戏窗口句柄
 void helper_class::patch()
 {
     byte_pattern patterner;
@@ -105,8 +129,8 @@ void helper_class::patch()
     patterner.find_pattern("50 FF 15 ? ? ? ? E9 16 FF FF FF");
     if (patterner.has_size(1))
     {
-        injector::MakeCALL(patterner.get(0).i(1), fps_sleep);
-        injector::MakeNOP(patterner.get(0).i(6), 1);
+        injector::MakeCALL(patterner.get(0).i(1), fps_sleep); // 把 call [Sleep] 换成 call fps_sleep
+        injector::MakeNOP(patterner.get(0).i(6), 1);          // 去掉多余的跳转
     }
 
     patterner.find_pattern("66 39 7D 10 8B 0D ? ? ? ? 0F 95 C0 50");
@@ -119,12 +143,14 @@ void helper_class::patch()
     }
 }
 
+// 开始工作：载入配置，并把系统定时器精度提升到最高
 void helper_class::begin_helper()
 {
     load_config();
     period_guard.emplace();
 }
 
+// 结束工作：停止魔手线程、恢复定时器精度并保存配置
 void helper_class::end_helper()
 {
     end_magic_hand();
@@ -132,24 +158,28 @@ void helper_class::end_helper()
     save_config();
 }
 
+// 取得当前选中的配置方案
 profile &helper_class::get_current_profile()
 {
     return _config.get_current_profile();
 }
 
+// 绘制 FFOHelper 界面：全局开关、配置方案管理、各技能的启用/间隔/耗时/缺省设置，以及帧率设置
 void helper_class::imgui_process()
 {
     auto *current_profile = &_config.get_current_profile();
 
 #pragma region FFOHelper
+    // 主窗口：无标题栏、自适应大小、不可折叠、无滚动条
     ImGui::Begin("FFOHelper", nullptr,
                  ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse |
                      ImGuiWindowFlags_NoScrollbar);
 
+    // Ctrl+S 作为全局快捷键（即使焦点不在该窗口也生效）
     ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_RouteAlways);
     if (ImGui::Checkbox("##switch", &_context.magic_hand_global_switch))
     {
-        // 开关魔手
+        // 开关魔手：打开时启动后台按键线程，关闭时停止
         if (_context.magic_hand_global_switch)
         {
             begin_magic_hand();
@@ -429,6 +459,7 @@ void helper_class::imgui_process()
 #pragma endregion
 }
 
+// 启动魔手：创建后台按键线程（已在运行则不重复创建）
 void helper_class::begin_magic_hand()
 {
     if (_magic_hand_thread.has_value())
@@ -439,6 +470,7 @@ void helper_class::begin_magic_hand()
     _magic_hand_thread.emplace(std::bind_front(&helper_class::magic_hand_thread_proc, this));
 }
 
+// 魔手线程主体：循环检查每个技能是否满足触发条件并发送按键
 void helper_class::magic_hand_thread_proc(std::stop_token stt)
 {
     // 启动魔手后, 先初始化context
@@ -456,6 +488,7 @@ void helper_class::magic_hand_thread_proc(std::stop_token stt)
 
     _context.magic_hand_default_key_pressed.fill(false);
 
+    // 每 10ms 轮询一次，直到收到停止请求
     while (!stt.stop_requested())
     {
         // 每次都从F1开始检查可以触发的技能
@@ -478,11 +511,11 @@ void helper_class::magic_hand_thread_proc(std::stop_token stt)
                 PostMessageA(ffo_hwnd, WM_KEYDOWN, key_code, 0);
                 PostMessageA(ffo_hwnd, WM_KEYUP, key_code, 0);
 
-                // 调整全局时钟
+                // 调整全局时钟（该技能的施放耗时决定下一次全局可触发的时间）
                 _context.magic_hand_global_clock.adjust_target_time(std::chrono::milliseconds(
                     static_cast<int>(current_profile.magic_hand_key_latencies[key_i] * 1000.0)));
 
-                // 调整自身时钟
+                // 调整自身时钟（该技能自身的施放间隔）
                 _context.magic_hand_key_clocks[key_i].adjust_target_time(std::chrono::milliseconds(
                     static_cast<int>(current_profile.magic_hand_key_intervals[key_i] * 1000.0)));
 
@@ -497,6 +530,7 @@ void helper_class::magic_hand_thread_proc(std::stop_token stt)
     }
 }
 
+// 停止魔手：请求线程退出并回收线程对象
 void helper_class::end_magic_hand()
 {
     if (!_magic_hand_thread.has_value())

@@ -1,2 +1,2 @@
 ﻿魔手增加触发Alt按键组(共F1~F10 Alt+F1~F10 Alt+1~0)需研究如何模拟
-联练习：使用Avalonia AOT建立外置魔手
+替换游戏的GetTickCount函数，虽然不知道会不会有用

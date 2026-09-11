@@ -6,6 +6,20 @@
 #include "helper/helper.h"
 #endif
 
+// =============================================================================
+//  opengl32.dll 代理（proxy DLL）
+//
+//  FFO 启动时会加载系统目录下的 opengl32.dll。本工程生成的同名 DLL 被放在
+//  游戏目录后会被优先加载，从而有机会在游戏进程内执行注入代码。
+//  本文件通过 OGL_DISPATCH/FIND_OGL 两个宏，把 opengl32.dll 导出的全部 OpenGL
+//  与 WGL 函数原样转发给系统真正的 opengl32.dll，保证游戏图形功能不受影响。
+//  （这也是为什么必须禁止 qqffo.exe 删除 opengl32.dll，否则注入会失效）
+// =============================================================================
+
+// 为某个 OpenGL 导出函数生成转发桩：
+//   - fn##func 保存真实函数地址（由后面的 FIND_OGL 填充）；
+//   - func##_stub 是一段裸函数，直接 jmp 到真实函数，不做任何额外处理。
+// 这些桩最终通过 dll.def 以同名导出，替代真正的 opengl32.dll 导出。
 #define OGL_DISPATCH(func)                                                                                             \
     FARPROC                fn##func;                                                                                   \
     __declspec(naked) void func##_stub()                                                                               \
@@ -382,10 +396,12 @@ OGL_DISPATCH(wglUseFontBitmapsW)
 OGL_DISPATCH(wglUseFontOutlinesA)
 OGL_DISPATCH(wglUseFontOutlinesW)
 
+// 从系统目录（而不是应用目录）加载指定 DLL，避免递归加载到自己
 static HMODULE LoadSystemLibrary(std::wstring_view filename)
 {
     wchar_t *szSystemPath = nullptr;
 
+    // 取得系统目录路径（如 C:\Windows\System32）
     SHGetKnownFolderPath(FOLDERID_System, 0, nullptr, &szSystemPath);
 
     std::filesystem::path path = szSystemPath;
@@ -395,8 +411,10 @@ static HMODULE LoadSystemLibrary(std::wstring_view filename)
     return LoadLibraryW((path / filename).c_str());
 }
 
+// 取得真实函数地址并保存到对应的 fn##func 变量中，供转发桩跳转使用
 #define FIND_OGL(func) fn##func = GetProcAddress(ogl_module, #func);
 
+// 加载系统 opengl32.dll，并解析全部需要转发的导出函数地址
 static void LoadOpenGL32()
 {
     auto ogl_module = LoadSystemLibrary(L"opengl32.dll");
@@ -771,23 +789,26 @@ static void LoadOpenGL32()
     FIND_OGL(wglUseFontOutlinesW)
 }
 
+// DLL 入口：
+//   附加到游戏进程时，先解析 OpenGL 转发函数，再执行注入与各项补丁；
+//   卸载时结束助手（停止魔手线程并保存配置）。
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH: {
-        LoadOpenGL32();
-        inject_game();
+        LoadOpenGL32();  // 解析真实 opengl32.dll 的函数地址
+        inject_game();   // 安装游戏内的 Hook 与内存补丁
 #ifndef FXPRESSER_PATCH_ONLY
-        helper_instance.patch();
-        helper_instance.begin_helper();
+        helper_instance.patch();        // 辅助功能相关的补丁（帧率限制等）
+        helper_instance.begin_helper(); // 载入配置并开启高精度计时
 #endif
         break;
     }
 
     case DLL_PROCESS_DETACH: {
 #ifndef FXPRESSER_PATCH_ONLY
-        helper_instance.end_helper();
+        helper_instance.end_helper(); // 停止魔手线程并保存配置
 #endif
         break;
     }
